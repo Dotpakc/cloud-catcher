@@ -40,11 +40,10 @@ export class Main extends Component<MainProps, MainState> {
     const settings: Settings = {
       showInvisible: true,
       trimWhitespace: true,
-
       terminalFont: termFont,
-
       darkMode: false,
       terminalBorder: false,
+      hideToken: true,
     };
 
     // Sync settings from local storage

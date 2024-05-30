@@ -14,6 +14,7 @@ export type Settings = {
   // General settings
   darkMode: boolean,
   terminalBorder: boolean,
+  hideToken: boolean,
 };
 
 export type SettingsProperties = {
@@ -67,6 +68,12 @@ export const Settings = ({ settings, update }: SettingsProperties): JSX.Element 
         <input type="checkbox" checked={settings.terminalBorder}
           onInput={(e: Event) => updateWith({ terminalBorder: (e.target as HTMLInputElement).checked })} />
         Terminal border
+      </label>
+
+      <label>
+        <input type="checkbox" checked={settings.hideToken}
+          onInput={(e: Event) => updateWith({ hideToken: (e.target as HTMLInputElement).checked })} />
+        Hide token
       </label>
     </div>
   </div >;

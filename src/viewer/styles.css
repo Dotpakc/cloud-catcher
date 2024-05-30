@@ -117,6 +117,7 @@ pre {
   background-color: var(--color-filelist-background);
   font-size: 0.8em;
   line-height: 1.4em;
+  overflow-y: auto;
 }
 
 .fileEntry {

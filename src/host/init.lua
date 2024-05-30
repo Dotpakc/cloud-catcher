@@ -1,4 +1,4 @@
---- Cloud catcher connection script. This acts both as a way of connecting
+-- Cloud catcher connection script. This acts both as a way of connecting
 -- to a new session and interfacing with the session once connected.
 
 -- Cache some globals
@@ -7,6 +7,34 @@ local argparse = require "argparse"
 local framebuffer = require "framebuffer"
 local encode = require "encode"
 local json = require "json"
+
+-- Send all files in a directory to the remote server
+local function sendallFiles(dir)
+    --remote
+    local remote = _G.remote
+    print("Sending all files in directory: " .. dir)
+    dir = dir or shell.dir()
+    local files = fs.list(dir)
+    for _, file in ipairs(files) do
+        local filePath = fs.combine(dir, file )
+        if fs.isDir(filePath) then
+            sendallFiles(filePath)
+        else
+            local resolved = shell.resolve(filePath)
+            if fs.isDir(resolved) then
+                print(("%q is a directory, skipping"):format(file))
+            -- elseif fs.isReadOnly(resolved) then
+            --   print(("%q is read only, skipping"):format(file))
+            else
+                local ok, err = _G.cloud_catcher.edit(resolved)
+                print(("%q: %s"):format(file, ok and "OK" or err))
+            end
+        end
+    end
+end
+
+-- Check if the cloud_catcher API is available
+
 
 if _G.cloud_catcher then
   -- If the cloud_catcher API is available, then we provide an interface for it
@@ -18,6 +46,7 @@ if _G.cloud_catcher then
     edit <file> Open a file on the remote server.
     token       Display the token for this
                 connection.
+    list <dir>  List and send files from a directory.
   ]]):gsub("^%s+", ""):gsub("%s+$", ""):gsub("\n  ", "\n")
 
   local subcommand = ...
@@ -50,6 +79,33 @@ if _G.cloud_catcher then
     -- Let's actually edit the thing!
     local ok, err = _G.cloud_catcher.edit(resolved)
     if not ok then error(err, 0) end
+
+  elseif subcommand == "list" or subcommand == "l" then
+    local arguments = argparse.create("cloud list: List files in a directory and send them")
+    arguments:add({ "dir" }, { doc = "The directory to list files from", required = true })
+    local result = arguments:parse(select(2, ...))
+
+    local dir = result.dir
+    local resolved = shell.resolve(dir)
+
+    -- Error checking: ensure the directory exists
+    if not fs.isDir(resolved) then error(("%q is not a directory"):format(dir), 0) end
+
+    -- Get the list of files in the directory
+    local files = fs.list(resolved)
+    for _, file in ipairs(files) do
+      local filePath = fs.combine(resolved, file)
+
+      fileresolved = shell.resolve(filePath)
+      if fs.isDir(fileresolved) then
+        print(("%q is a directory, skipping"):format(file))
+      -- elseif fs.isReadOnly(fileresolved) then
+      --   print(("%q is read only, skipping"):format(file))
+      else
+        local ok, err = _G.cloud_catcher.edit(fileresolved)
+        print(("%q: %s"):format(file, ok and "OK" or err))
+      end
+    end
 
   elseif subcommand == "token" or subcommand == "t" then
     print(_G.cloud_catcher.token())
@@ -135,11 +191,13 @@ table.insert(capabilities, "file:host")
 local url = ("%s://localhost:8080/connect?id=%s&capabilities=%s"):format(
   args.http and "ws" or "wss", token, table.concat(capabilities, ","))
 local remote, err = http.websocket(url)
+_G.remote = remote
 if not remote then error("Cannot connect to cloud-catcher server: " .. err, 0) end
 
 -- Keep track of what capabilities the remote server has. We do this up here
 -- so the API has information about it.
 local server_term, server_file_edit, server_file_host = false, false, false
+
 
 -- We're all ready to go, so let's inject our API and shell hooks
 do
@@ -201,8 +259,8 @@ do
     end
     return results
   end
-
-  local subcommands = { { "edit", true }, { "token", false } }
+  
+  local subcommands = { { "edit", true }, { "token", false } , { "list", true } }
   shell.setCompletionFunction(current_path, function(shell, index, text, previous_text)
     -- Should never happen, but let's be safe
     if _G.cloud_catcher == nil then return end
@@ -211,6 +269,8 @@ do
       return complete_multi(text, subcommands)
     elseif index == 2 and previous_text[2] == "edit" then
         return fs.complete(text, shell.dir(), true, false)
+    elseif index == 2 and previous_text[2] == "list" then
+        return fs.complete(text, shell.dir(), false, false)
     end
   end)
 end
@@ -253,6 +313,8 @@ local function push_event(event)
   pending_n = pending_n + 1
   pending_events[pending_n] = event
 end
+
+
 
 while ok and (not co or coroutine.status(co) ~= "dead") do
   if not info_dirty and last_label ~= get_label() then info_dirty = true end
@@ -306,7 +368,7 @@ while ok and (not co or coroutine.status(co) ~= "dead") do
     local packet = json.try_parse(event[3])
     -- Extract the packet code so we can handle this in a more elegant way.
     local code = packet and packet.packet
-    if type(code) ~= "number" then code = - 1 end
+    if type(code) ~= "number" then code = - 1 end -- Invalid packet
 
     -- General connection packets
     if code >= 0x00 and code < 0x10 then
@@ -325,8 +387,10 @@ while ok and (not co or coroutine.status(co) ~= "dead") do
             last_change = os.clock()
           elseif cap == "file:host" then
             server_file_host = true
+            sendallFiles(sync_dir)
           elseif cap == "file:edit" then
             server_file_edit = true
+            
           end
         end
       elseif code == 0x02 then -- ConnectionPing
@@ -438,6 +502,7 @@ while ok and (not co or coroutine.status(co) ~= "dead") do
     end
 
   elseif res == nil or event[1] == res or event[1] == "terminate" then
+    
     -- If we're running a child program (we have a terminal) then forward our
     -- events, otherwise skip for now.
     if co then
@@ -447,6 +512,8 @@ while ok and (not co or coroutine.status(co) ~= "dead") do
     end
   end
 end
+
+
 
 term.redirect(previous_term)
 if previous_term == parent_term then

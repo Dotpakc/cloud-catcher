@@ -1,5 +1,5 @@
 #!/usr/bin/env lua
-local server = os.getenv("npm_package_config_server") or "cloud-catcher.squiddev.cc"
+local server = os.getenv("npm_package_config_server") or "127.0.0.1"
 local out, err = io.open("_site/cloud.lua", "w")
 if not out then error(err, 0) end
 
