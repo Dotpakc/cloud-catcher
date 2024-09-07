@@ -53,7 +53,7 @@ html, body, .container, :global(.container) {
 }
 
 pre, code {
-  font-family: "Consolas", "Courier New" monospace;
+  font-family: "Consolas", "Courier New", monospace;
   background-color: var(--color-code-background);
 }
 
@@ -81,7 +81,6 @@ pre {
 .infoView {
   font-size: 1.5em;
   line-height: 1.3em;
-
   border: 3px solid #eee;
 }
 
@@ -112,12 +111,18 @@ pre {
 }
 
 .fileList {
-  flex-basis: 200px;
-  max-width: 200px;
+  max-width: 300px;
+  min-width: 50px;
+  transition: width 0.2s ease;
   background-color: var(--color-filelist-background);
   font-size: 0.8em;
   line-height: 1.4em;
   overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.fileListResizing {
+  transition: none;
 }
 
 .fileEntry {
@@ -153,33 +158,48 @@ pre {
   text-decoration: none;
 }
 
-.fileIcon { float: right; padding: 5px; }
-.fileEntry:hover .fileIcon:before { content: "\2715"; }
-.fileIcon.fileIconModified:before { content: "\2b24"; }
-.fileIcon.fileIconReadonly:before { content: "!"; }
+.fileIcon {
+  float: right;
+  padding: 5px;
+}
+
+.fileEntry:hover .fileIcon:before {
+  content: "\2715";
+}
+
+.fileIcon.fileIconModified:before {
+  content: "\2b24";
+}
+
+.fileIcon.fileIconReadonly:before {
+  content: "!";
+}
 
 .notifications {
   position: absolute;
-  left: 200px; /* From .file-list, I'm sorry */
+  left: 200px;
   top: 0;
-  right:  0;
+  right: 0;
 }
 
 .notification {
   position: relative;
   display: flex;
   justify-content: space-between;
-
   width: 80%;
   margin: 10px auto;
   z-index: 100;
   font-size: 0.9em;
-
   background: var(--color-notification-background);
 }
 
-.notification > * { padding: 0.5em; }
-.notificationKind { color: white; }
+.notification > * {
+  padding: 0.5em;
+}
+
+.notificationKind {
+  color: white;
+}
 
 .notificationContent {
   flex-grow: 1;
@@ -196,20 +216,49 @@ pre {
   align-items: center;
 }
 
-.notificationClose:hover { color: #666; }
-.notificationClose:before { content: "\2715"; }
+.notificationClose:hover {
+  color: #666;
+}
 
-.notificationError { border: 1px solid var(--color-error); }
-.notificationError .notificationKind { background-color: var(--color-error); }
-.notificationError .notificationKind span:before { content: "Error"; }
+.notificationClose:before {
+  content: "\2715";
+}
 
-.notificationWarn { border: 1px solid var(--color-warn); }
-.notificationWarn .notificationKind { background-color: var(--color-warn); }
-.notificationWarn .notificationKind span:before { content: "Warning"; }
+.notificationError {
+  border: 1px solid var(--color-error);
+}
 
-.notificationOk { border: 1px solid var(--color-ok); }
-.notificationOk .notificationKind { background-color: var(--color-ok); }
-.notificationOk .notificationKind span:before { content: "Success"; }
+.notificationError .notificationKind {
+  background-color: var(--color-error);
+}
+
+.notificationError .notificationKind span:before {
+  content: "Error";
+}
+
+.notificationWarn {
+  border: 1px solid var(--color-warn);
+}
+
+.notificationWarn .notificationKind {
+  background-color: var(--color-warn);
+}
+
+.notificationWarn .notificationKind span:before {
+  content: "Warning";
+}
+
+.notificationOk {
+  border: 1px solid var(--color-ok);
+}
+
+.notificationOk .notificationKind {
+  background-color: var(--color-ok);
+}
+
+.notificationOk .notificationKind span:before {
+  content: "Success";
+}
 
 .settingsCog {
   position: fixed;
@@ -220,7 +269,9 @@ pre {
   fill: var(--color-text);
 }
 
-.settingsCog:hover { opacity: 1; }
+.settingsCog:hover {
+  opacity: 1;
+}
 
 .dialogueOverlay {
   position: fixed;
@@ -228,9 +279,7 @@ pre {
   bottom: 0px;
   left: 0px;
   right: 0px;
-
-  z-index: 150; /* Over notification and cogs */
-
+  z-index: 150;
   background: rgba(0, 0, 0, 0.7);
 }
 
@@ -240,7 +289,6 @@ pre {
   margin: 0px auto;
   padding: 20px;
   width: 800px;
-
   background: var(--color-background);
 }
 
@@ -258,4 +306,120 @@ pre {
 
 .formGroup input, .formGroup select {
   margin: 0px 5px;
+}
+
+/* .editorView {
+  position: relative;
+  overflow: hidden;
+}
+
+#blocklyDiv {
+  height: 700px;
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  overflow: hidden;
+} */
+
+#generatedCode {
+  font-size: 0.8em;
+  padding: 10px;
+  background-color: #2dff31;
+}
+
+#output {
+  font-size: 0.8em;
+  padding: 10px;
+  background-color: #f9982f;
+}
+
+.dragHandle {
+  width: 5px;
+  background-color: var(--color-fileentry-hover);
+  cursor: ew-resize;
+  flex-shrink: 0;
+  flex-grow: 0;
+}
+
+.tabs {
+  display: flex;
+  justify-content: flex-start;
+  background-color: #f9f9f9;
+  border-bottom: 2px solid #ddd;
+  padding: 5px;
+}
+.tabContainer {
+  display: flex;
+  justify-content: flex-start;
+  background-color: #f0f0f0;
+  border-bottom: 2px solid #ccc;
+  padding: 0;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  background-color: #e0e0e0;
+  border: none;
+  outline: none;
+  border-radius: 8px 8px 0 0;
+  margin-right: 5px;
+  cursor: pointer;
+  color: #666;
+  font-size: 14px;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.tab:hover {
+  background-color: #d0d0d0;
+  color: #333;
+}
+
+.tab.active {
+  background-color: #fff;
+  border-bottom: none;
+  color: #007acc;
+  font-weight: bold;
+}
+
+.tab i {
+  margin-right: 8px;
+  font-size: 1.2em;
+  color: inherit;
+}
+
+.tab.active i {
+  color: #007acc;
+}
+
+.tab.disabled {
+  color: #bbb;
+  cursor: not-allowed;
+  background-color: #f1f1f1;
+}
+
+/* Скидання стилів для кнопок */
+button.tab {
+  border: none;
+  background: none;
+  font: inherit;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  appearance: none;
+}
+
+.codeView {
+  padding: 20px;
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+.activeTab {
+  background-color: #fff;
+  color: #007acc;
+  font-weight: bold;
+  border-bottom: 2px solid white;
 }

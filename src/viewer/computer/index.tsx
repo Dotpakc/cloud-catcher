@@ -8,11 +8,11 @@ import { fletcher32 } from "../packet";
 import type { Settings } from "../settings";
 import {
   active, computerSplit, computerView, fileComputer, fileEntry, fileIcon, fileIconModified, fileIconReadonly,
-  fileInfo, fileList as fileListCls, fileName, terminalView,
+  fileInfo, fileList as fileListCls, fileName, terminalView, dragHandle, tabs, tab,
 } from "../styles.css";
 import Editor, * as editor from "./editor";
+import BlocklyEditor from "./blocly_editor";
 import { Notification, NotificationBody, NotificationKind, Notifications } from "./notifications";
-
 
 type FileInfo = {
   name: string,
@@ -53,13 +53,14 @@ type ComputerState = {
 
   id: number | null,
   label: string | null,
+  activeTab: 'computer' | 'code' | 'blocklycode', // State to track the active tab
 };
 
 const windowTitle = (id: number | null, label: string | null) => {
-  if (id === null && label === null) return "Cloud Catcher";
-  if (id === null) return `${label} | Cloud Catcher`;
-  if (label === null) return `Computer #${id} | Cloud Catcher`;
-  return `${label} (Computer #${id}) | Cloud Catcher`;
+  if (id === null && label === null) return "Hillel Minecraft Computer";
+  if (id === null) return `${label} | Hillel Minecraft Computer`;
+  if (label === null) return `Computer #${id} | Hillel Minecraft Computer`;
+  return `${label} (Computer #${id}) | Hillel Minecraft Computer`;
 };
 
 export class Computer extends Component<ComputerProps, ComputerState> implements ComputerActionable {
@@ -72,15 +73,42 @@ export class Computer extends Component<ComputerProps, ComputerState> implements
       notifications: [],
       terminal: new TerminalData(),
       terminalChanged: new Semaphore(),
-      id: null, label: null,
+      id: null, 
+      label: null,
+      activeTab: 'computer', // Default to the computer tab
     };
     this.setState(state);
   }
 
   public componentDidMount() {
-    // This is a bit of a kuldge, as we need to queue this _before_ the
-    // event buffer is flushed.
+    // Attach event handlers for the terminal
     this.props.events.attach(this.onPacket);
+    
+    // Handle resizing
+    const dragHandle = document.getElementById('dragHandle');
+    const fileList = document.getElementById('fileList');
+
+    if (dragHandle && fileList) {
+      let isResizing = false;
+
+      dragHandle.addEventListener('mousedown', function () {
+        isResizing = true;
+        fileList.classList.add('fileList-resizing');
+      });
+
+      document.addEventListener('mousemove', function (e) {
+        if (!isResizing) return;
+        const newWidth = e.clientX - fileList.offsetLeft;
+        if (newWidth >= 50 && newWidth <= 300) {  // Діапазон ширини
+          fileList.style.width = `${newWidth}px`;
+        }
+      });
+
+      document.addEventListener('mouseup', function () {
+        isResizing = false;
+        fileList.classList.remove('fileList-resizing');
+      });
+    }
   }
 
   public componentWillUnmount() {
@@ -97,13 +125,12 @@ export class Computer extends Component<ComputerProps, ComputerState> implements
     { activeFile, files, notifications, terminal, terminalChanged, id, label }: ComputerState,
   ) {
     const fileList = files.map(x => {
-      // TODO: Too lazy to do this right now
       const fileClasses = fileEntry + " " + (x.name === activeFile ? active : "");
       const iconClasses = fileIcon
         + " " + (x.modified ? fileIconModified : "")
         + " " + (x.readOnly ? fileIconReadonly : "");
       const iconLabels = "Close editor" + (x.readOnly ? " (read only)" : "");
-
+  
       let name = x.name;
       if (name.charAt(0) !== "/") name = "/" + name;
       const sepIndex = name.lastIndexOf("/");
@@ -113,38 +140,96 @@ export class Computer extends Component<ComputerProps, ComputerState> implements
         <div class={fileInfo}>{name.substr(0, sepIndex + 1)}</div>
       </div>;
     });
-
+  
     const computerClasses = `${fileEntry} ${fileComputer} ${activeFile === null ? active : ""}`;
     const target = `${window.location.origin}/?id=${this.props.token}`;
-    const activeInfo = activeFile === null ? null : files.find(x => x.name === activeFile);
-    return <div class={computerView}>
-      <Notifications notifications={notifications} onClose={this.onCloseNotification} />
-      <div class={computerSplit}>
-        <div class={fileListCls}>
-          <div class={computerClasses} onClick={this.createSelectFile(null)}>
-            <div class={fileName}>Remote files</div>
-            <div class={fileInfo}>
-            { settings.hideToken 
-                ? <a title="Get a shareable link of this session token"
-                  onClick={this.onClickToken}>Click to copy a shared link</a>
-                : <a href={target} title="Get a shareable link of this session token"
-                  onClick={this.onClickToken}>{token}</a>
-              }
-            </div>
-          </div>
-          {fileList}
+  
+    return (
+      <div class={computerView}>
+        <Notifications notifications={notifications} onClose={this.onCloseNotification} />
+  
+        {/* Tabs for switching views */}
+        <div class={tabs}>
+          <button
+            class={tab}
+            className={this.state.activeTab === 'computer' ? 'active' : ''}
+            onClick={() => this.setState({ activeTab: 'computer' })}
+          >
+            <i class="fas fa-terminal"></i> Computer
+          </button>
+          <button
+            class={tab}
+            className={this.state.activeTab === 'code' ? 'active' : ''}
+            onClick={() => this.setState({ activeTab: 'code' })}
+            disabled={!activeFile}
+          >
+            <i class="fas fa-code"></i> Code
+          </button>
+          <button
+            class = {tab}
+            className={`${this.state.activeTab === 'blocklycode' ? 'active' : ''}`}
+            onClick={() => this.setState({ activeTab: 'blocklycode' })}
+            disabled={!activeFile}
+          >
+            <i class="fas fa-cubes"></i> BlocklyCode
+          </button>
         </div>
-        {activeInfo == null || activeFile == null
-          ? <div class={terminalView}>
-            <Terminal computer={this} terminal={terminal} changed={terminalChanged} focused={focused}
-              font={settings.terminalFont} on={true} id={id} label={label} />
+
+  
+        <div class={computerSplit}>
+          <div class={fileListCls} id="fileList">
+            <div class={computerClasses} onClick={this.createSelectFile(null)}>
+              <div class={fileName}>Remote files</div>
+              <div class={fileInfo}>
+                {settings.hideToken
+                  ? <a title="Get a shareable link of this session token"
+                      onClick={this.onClickToken}>Click to copy a shared link</a>
+                  : <a href={target} title="Get a shareable link of this session token"
+                      onClick={this.onClickToken}>{token}</a>
+                }
+              </div>
+            </div>
+            {fileList}
           </div>
-          : <Editor model={activeInfo.model} readOnly={activeInfo.readOnly} settings={settings} focused={focused}
-            onChanged={this.createChanged(activeFile)}
-            doSave={this.createSave(activeFile)} doClose={this.createClose(activeFile)} />}
+  
+          {/* Resizable drag handle */}
+          <div id="dragHandle" class={dragHandle}></div>
+  
+          {/* Conditionally render the Terminal or Editor */}
+          {this.state.activeTab === 'computer' ? (
+            <div class={terminalView}>
+              <Terminal
+                computer={this}
+                terminal={terminal}
+                changed={terminalChanged}
+                focused={focused}
+                font={settings.terminalFont}
+                on={true}
+                id={id}
+                label={label}
+              />
+            </div>
+          ) : this.state.activeTab === 'code' && activeFile && this.state.files.find(f => f.name === activeFile)?.model ? (
+            <Editor
+              model={this.state.files.find(f => f.name === activeFile)!.model}
+              readOnly={false}
+              settings={settings}
+              focused={focused}
+              onChanged={this.createChanged(activeFile)}
+              doSave={this.createSave(activeFile)}
+              doClose={this.createClose(activeFile)}
+            />
+          ) : this.state.activeTab === 'blocklycode' && activeFile ? (  // Перевіряємо активний файл
+            <BlocklyEditor activeFile={this.state.activeFile || null} />
+
+          ) : (
+            <div>Please select a file to edit</div>
+          )}
+        </div>
       </div>
-    </div>;
+    );
   }
+  
 
   private createSelectFile(fileName: string | null) {
     return (e: Event) => {
@@ -184,8 +269,6 @@ export class Computer extends Component<ComputerProps, ComputerState> implements
       const file = this.state.files.find(x => x.name === fileName);
       if (!file || file.readOnly) return;
 
-      // So technically we should update the state, but I'm just mutating
-      // for now as it doesn't change how things are displayed. I'm sorry.
       file.updateMark = editor.getVersion(file.model);
       file.updateChecksum = fletcher32(contents);
       file.updateContents = contents;
@@ -232,9 +315,7 @@ export class Computer extends Component<ComputerProps, ComputerState> implements
 
       const { terminal, terminalChanged } = this.state;
 
-      // TODO: Simplify our storage of terminals.
       terminal.resize(packet.width, packet.height);
-
       terminal.cursorX = packet.cursorX - 1;
       terminal.cursorY = packet.cursorY - 1;
       terminal.cursorBlink = packet.cursorBlink;
@@ -272,14 +353,10 @@ export class Computer extends Component<ComputerProps, ComputerState> implements
             let file = files.find(x => x.name === name);
             if (flags & FileActionFlags.Open) activeFile = name;
             if (!file) {
-              // We're seeing the file for the first time, so create a model and
-              // everything.
               const model = editor.createModel(actionEntry.contents, name, text => {
-                // Setup some event listeners for this model
                 text.onDidChangeContent(() => {
                   const file = this.state.files.find(x => x.name === name);
                   if (!file) return;
-
                   const modified = text.getAlternativeVersionId() !== file.savedVersionId;
                   if (modified !== file.modified) this.setFileState(file, { modified });
                 });
@@ -289,48 +366,35 @@ export class Computer extends Component<ComputerProps, ComputerState> implements
                 name, model,
                 readOnly: (flags & FileActionFlags.ReadOnly) !== 0,
                 isNew: (flags & FileActionFlags.New) !== 0,
-
                 remoteContents: actionEntry.contents,
                 remoteChecksum: fletcher32(actionEntry.contents),
-
                 updateChecksum: undefined, updateContents: undefined, updateMark: undefined,
-
                 modified: false,
                 savedVersionId: editor.getVersion(model),
               };
 
               files.push(file);
-
               return { file: name, result: true };
 
             } else if (file.remoteChecksum === checksum || (flags & FileActionFlags.Force)) {
-              // The remote checksum matches our current one, so update our model.
               editor.setContents(file.model, actionEntry.contents);
               file.remoteContents = actionEntry.contents;
               file.remoteChecksum = checksum;
               file.isNew = false;
-
               return { file: name, result: true };
             } else {
-              // We couldn't update, so just inform the user about this problem.
-              // TODO: Keep track of both the "good" version and the last version we got?
               this.pushFileNotification(file, NotificationKind.Warn, "update",
                 <span><code>{file.name}</code> has been changed on the remote.</span>);
-
               return { file: name, result: false };
             }
           }
-
           default:
-            // TODO: Support for patch
             return { file: name, result: false };
         }
       });
 
       files = files.sort((a, b) => a.name.localeCompare(b.name));
       this.setState({ files, activeFile });
-
-      // TODO: Send results back to the broadcaster.
     } else if (packet.packet === PacketCode.FileConsume) {
       for (const info of packet.files) {
         const { file: name, result, checksum } = info;
@@ -342,15 +406,12 @@ export class Computer extends Component<ComputerProps, ComputerState> implements
                 this.setFileState(file, {
                   savedVersionId: file.updateMark!,
                   modified: editor.getVersion(file.model) !== file.updateMark,
-
                   remoteChecksum: file.updateChecksum,
                   remoteContents: file.updateContents!,
-
                   updateMark: undefined,
                   updateChecksum: undefined,
                   updateContents: undefined,
                 });
-
                 this.removeFileNotification(file, "update");
               } else {
                 this.pushFileNotification(file, NotificationKind.Warn, "update",
@@ -371,28 +432,20 @@ export class Computer extends Component<ComputerProps, ComputerState> implements
                   <span><code>{file.name}</code> failed to save, is the file read only?</span>);
               }
               break;
-
           }
         }
       }
     }
   }
 
-  /**
-   * Update the state for a given file
-   */
   private setFileState<K extends keyof FileInfo>(file: FileInfo, props: Pick<FileInfo, K>) {
     this.setState({
       files: this.state.files.map(x => x !== file ? x : { ...x, ...props }),
     });
   }
 
-  /**
-   * Push a notification with for a file
-   */
   private pushFileNotification(file: FileInfo, kind: NotificationKind, category: string, message: NotificationBody) {
     const id = file.name + "\0" + category;
-
     const notifications = this.state.notifications.filter(x => x.id !== id);
     notifications.push({ id, kind, message });
     this.setState({ notifications });

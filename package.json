@@ -32,6 +32,7 @@
     "host": "node _bin/server.cjs"
   },
   "dependencies": {
+    "blockly": "^11.1.0",
     "diff": "^5.0.0",
     "prom-client": "^14.0.0",
     "ws": "^8.2.0"

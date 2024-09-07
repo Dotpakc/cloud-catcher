@@ -15,59 +15,24 @@ const genSetup = (token: string) =>
     </pre>
   </div>;
 
-const githubLink =
-  <div class={infoDescription}>
-    <p>
-      Think you've found a bug? Have a suggestion? Why not put it
-      on <a href="https://github.com/SquidDev-CC/cloud-catcher"
-        title="CloudCatcher's GitHub repository">the GitHub repo</a>?
-    </p>
-  </div>;
 
 export const TokenDisplay = ({ token }: TokenDisplayProps) =>
   <div class={infoContainer}>
     <div class={infoView}>
-      <h2>Getting started</h2>
+      <h2>Давайте почнемо!</h2>
       {genSetup(token)}
     </div>
     <div class={infoDescription}>
-      <h3>What is Cloud Catcher?</h3>
+      <h3>Я почати користуватись?</h3>
       <p>
-        Cloud Catcher is a web terminal for ComputerCraft, allowing you to
-        interact with any in-game computer in the browser, as well as edit files
-        remotely!
+        1. Скопіюйте ці дві команди в термінал комп'ютера або робота.
       </p>
       <p>
-        For more information, as well as source code and screenshots, see
-        the <a href="https://github.com/SquidDev-CC/cloud-catcher">GitHub repository</a>.
+        2. Перша команда завантажить програму, а друга запустить її. 
       </p>
-      <h3>Getting started</h3>
-      <p>You will require:</p>
-      <ul>
-        <li>An internet connection</li>
-        <li><a href="https://minecraft.curseforge.com/projects/cc-tweaked">CC: Tweaked</a></li>
-      </ul>
       <p>
-        Then just follow the instructions at the top!
+        3. Насолоджуйтесь!
       </p>
-      <h3>Some little tips</h3>
-      <p>
-        The <code>cloud.lua</code> program can be run with <code>--help</code> to
-        see a full list of options, but here's a look at some of the highlights:
-      </p>
-      <ul>
-        <li><code>cloud -tnone TOKEN</code> Don't show the terminal remotely</li>
-        <li>
-          <code>cloud -t80x30 TOKEN</code> Use a terminal 80 characters wide and
-          30 high. Note this will hide the terminal on the local computer.
-        </li>
-        <li>Use <code>cloud edit FILE</code> to edit a file within your browser</li>
-        <li>
-          Click your token in the top-left corner in order to create a link to
-          this session. This can be shared with friends, to allow multiple
-          people to view your computer!
-        </li>
-      </ul>
     </div>
   </div>;
 
@@ -78,11 +43,10 @@ export type LostConnectionProps = {
 export const LostConnection = ({ token }: LostConnectionProps) =>
   <div class={infoContainer}>
     <div class={infoView}>
-      <h2>Connection Lost</h2>
-      <p>We've lost our connection to this computer. Maybe try restarting the script:</p>
+      <h2>З'єднання втрачено</h2>
+      <p>Ми втратили зв'язок з сервером. Спробуйте перезавантажити сторінку.</p>
       {genSetup(token)}
     </div>
-    {githubLink}
   </div>;
 
 export type UnknownErrorProps = {
@@ -92,8 +56,7 @@ export type UnknownErrorProps = {
 export const UnknownError = ({ error }: UnknownErrorProps) =>
   <div class={infoContainer}>
     <div class={`${infoView} ${errorView}`}>
-      <h2>An error occured</h2>
+      <h2>Сталася помилка</h2>
       <pre>{error}</pre>
     </div>
-    {githubLink}
   </div>;

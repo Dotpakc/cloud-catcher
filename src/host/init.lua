@@ -189,7 +189,7 @@ table.insert(capabilities, "file:host")
 
 -- Let's try to connect to the remote server
 local url = ("%s://localhost:8080/connect?id=%s&capabilities=%s"):format(
-  args.http and "ws" or "wss", token, table.concat(capabilities, ","))
+  args.http and "wss" or "ws", token, table.concat(capabilities, ","))
 local remote, err = http.websocket(url)
 _G.remote = remote
 if not remote then error("Cannot connect to cloud-catcher server: " .. err, 0) end
