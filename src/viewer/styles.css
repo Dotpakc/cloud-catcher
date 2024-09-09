@@ -113,7 +113,7 @@ pre {
 .fileList {
   max-width: 300px;
   min-width: 50px;
-  transition: width 0.2s ease;
+  /* transition: width 0.2s ease; */
   background-color: var(--color-filelist-background);
   font-size: 0.8em;
   line-height: 1.4em;
