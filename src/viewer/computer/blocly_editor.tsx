@@ -173,13 +173,21 @@ export default class BlocklyEditor extends Component<BlocklyEditorProps, Blockly
             <button onClick={() => this.changeTab('generatedCode')} disabled={activeTab === 'generatedCode'}>Generated Code</button>
           </div>
 
-            <div className={editorView} id="blocklyDiv" style={{ height: '100%', border: '1px solid #ddd', borderRadius: '5px', overflow: 'hidden', width: '100%' }}></div>
+            {/* <div className={editorView} id="blocklyDiv" style={{ height: '100%', border: '1px solid #ddd', borderRadius: '5px', overflow: 'hidden', width: '100%' }}></div>
 
             <div>
               <h3>Generated Lua code</h3>
               <pre id="generatedCode"></pre>
               <button onClick={this.copyToClipboard}>Copy to Clipboard</button>
+            </div> */}
+
+            <div className={editorView} style={{ display: activeTab === 'blockly' ? 'block' : 'none' ,height: '100%', border: '1px solid #ddd', borderRadius: '5px', overflow: 'hidden', width: '100%' }} id="blocklyDiv" />
+            <div style={{ display: activeTab === 'generatedCode' ? 'block' : 'none' }}>
+              <h3>Generated Lua code</h3>
+              <pre id="generatedCode"></pre>
+              <button onClick={this.copyToClipboard}>Copy to Clipboard</button>
             </div>
+
 
         </div>
       </div>
